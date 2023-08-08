@@ -1,0 +1,691 @@
+<!doctype html>
+<html>
+<head>
+    <title>
+        Filtered
+    </title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+    <script src='https://cdn.plot.ly/plotly-2.24.1.min.js'></script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=default"></script>
+
+    <!-- Load d3.js
+    <script src="https://d3js.org/d3.v4.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/holtzy/D3-graph-gallery@master/LIB/d3.layout.cloud.js"></script>
+    -->
+
+    <script src="https://d3js.org/d3.v6.js"></script>
+    <link rel="stylesheet" type="text/css" href="style.css">
+
+    <!-- Load d3-cloud -->
+    <script src="https://cdn.jsdelivr.net/gh/holtzy/D3-graph-gallery@master/LIB/d3.layout.cloud.js"></script>
+
+    <script src="//d3js.org/d3-scale-chromatic.v0.3.min.js"></script>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+    <link rel="stylesheet" href="{{ url_for('static',filename='css/filtered.css') }}" />
+    <noscript><link rel="stylesheet" href="{{ url_for('static',filename='css/noscript.css') }}" /></noscript>
+</head>
+<body class="is-preload">
+<!-- Sidebar -->
+<section id="sidebar">
+    <div class="inner">
+        <nav>
+            <ul>
+                <li><a href="#intro">Search Summary</a></li>
+                <li><a href="#one-a">Ratings</a></li>
+                <li><a href="#one-b">Open/Close</a></li>
+                <li><a href="#one-c">Popular Timing</a></li>
+                <li><a href="#two-a">Top 10 Businesses</a></li>
+                <li><a href="#two-b">Bottom 10 Businesses</a></li>
+                <li><a href="#two-c">Other Businesses</a></li>
+            </ul>
+            <a href="/" class="button scrolly">Start a New Search</a>
+            <br>
+            <a href="#intro" class="button scrolly">Scroll to Top</a>
+        </nav>
+    </div>
+</section>
+<div id="wrapper">
+
+    <!-- Intro -->
+    <section id="intro" class="wrapper style1 fullscreen fade-up">
+        <div class="inner">
+            <h1>Search Result</h1>
+            <div class="success_score_div">
+                <p class="success_score_number" id="success_score_number">{{success_score}}%</p>
+                <p class="success_score_text intro_p_margin">Success Score</p>
+            </div>
+            <p class="intro_p_margin">Filtering {{category}}, {{distance}}kms around {{address}}.</p>
+            <p class="intro_p_margin">{{all_businesses|length}} businesses found.</p>
+            <ul class="actions">
+                <li><a href="#one" class="button scrolly">Explore</a></li>
+                <li><a href="/" class="button scrolly">Start a New Search</a></li>
+            </ul>
+        </div>
+    </section>
+
+    <!-- One -->
+    <section id="one" class="wrapper style2 spotlights">
+        <section>
+            <div class="content" id="one-a">
+                <div class="inner">
+                    <h2>Ratings Distribution of the area</h2>
+                    <p class="subheading_title">Distribution of ratings out of 5 given by the customers.</p>
+                    <div id="ratings_graph">
+                        <!-- ratings distribution bar plot -->
+                    </div>
+                </div>
+            </div>
+        </section>
+        <section>
+            <div class="content" id="one-b">
+                <div class="inner">
+                    <h2>Businesses Open/Closed</h2>
+                    <p class="subheading_title">Status of businesses open or permanently closed.</p>
+                    <div id='status_graph'>
+                        <!-- no of open business pie plot -->
+                    </div>
+                </div>
+            </div>
+        </section>
+        <section>
+            <div class="content" id="one-c">
+                <div class="inner">
+                    <h2>Popular Timing</h2>
+                    <p class="subheading_title">Opening and closing times of top businesses.</p>
+                    <div id='timing'>
+                        <!-- starting time bar plot -->
+                    </div>
+                </div>
+            </div>
+        </section>
+    </section>
+
+    <!-- Two -->
+    <section id="two" class="wrapper style3 fade-up">
+        <div class="inner" id="two-a">
+            <!-- START: top businesses-->
+            <h2>Top 10 businesses in the area</h2>
+            <p class="subheading_title">Common Attributes</p>
+            <div class="features top_attributes">
+                {% if not top_attributes.empty %}
+                {% if top_attributes is mapping %}
+                <ul class="business_attributes">
+                {% for key, value in top_attributes.items() %}
+
+                    <li>{{key}} : {{value}}</li>
+
+                {% endfor %}
+                </ul>
+                {% endif %}
+                {% endif %}
+            </div>
+
+            <p class="subheading_title">Prominent Keywords from Reviews</p>
+            <div id="top-word-cloud"></div>
+
+            <p class="subheading_title">Positives from the Reviews</p>
+
+            <div class="features top_attributes">
+                {% if not top_reviews.empty %}
+                <table>
+                    <tr>
+                        <th>Keyword</th>
+                        <th>Occurrences</th>
+                        <th>Sample Review</th>
+                    </tr>
+                    {% for index, row in top_reviews.iterrows() %}
+                    <tr>
+                        <td>{{row['feature']}}</td>
+                        <td>{{row['occurrences']}}</td>
+                        <td>{{row['sentence']}}</td>
+
+                    </tr>
+                    {% endfor %}
+                </table>
+                {% endif %}
+            </div>
+
+            <p class="subheading_title">List of top businesses based on ratings and popularity.</p>
+            <div class="features">
+                {% if not top_businesses.empty %}
+                {% for index, row in top_businesses.iterrows() %}
+
+                <div class="accordion" id="accordion-top-businesses">
+                    <div class="accordion-item">
+                        <h4 class="accordion-header" id="headingOne">
+                            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#{{ row['business_id'] }}" aria-expanded="true" aria-controls="{{ row['business_id'] }}">
+                                {{ row['name'] }}
+                            </button>
+                        </h4>
+                        <div id="{{ row['business_id'] }}" class="accordion-collapse collapse" aria-labelledby="headingOne" data-bs-parent="#accordion-top-businesses">
+                            <div class="accordion-body">
+                                <div><b>Address:</b> {{ row['address'] }}</div>
+                                <div><b>City:</b> {{ row['city'] }}</div>
+                                <div><b>Ratings:</b> {{row['ratings'] }}</div>
+                                <div><b>Stars:</b> {{ row['stars'] }}</div>
+                                <div><b>Review Count:</b> {{ row['review_count'] }}</div>
+                                <div><b>Status:</b> {% if row['is_open'] == 1 %}
+                                    Open
+                                    {% else %}
+                                    Permanently Closed
+                                    {% endif %}
+                                </div>
+                                <div><b>Attributes:</b>
+                                    {% set cell_dict = row['attributes'] %}
+                                    {% if cell_dict is mapping %}
+                                    <ul class="business_attributes">
+                                    {% for key, value in cell_dict.items() %}
+                                        <li>{{key}} : {{value}}</li>
+                                    {% endfor %}
+                                    </ul>
+                                    {% endif %}
+                                </div>
+                                <div><b>Tags:</b> {{ row['categories'] }}</div>
+                                <div><b>Distance:</b> {{ row['distance'] }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {% endfor %}
+                {% endif %}
+            </div>
+            <!-- END: top businesses-->
+        </div>
+        <div class="inner list-section-2" id="two-b">
+
+        <!-- START: bottom businesses-->
+            <h2>Bottom 10 businesses in the area</h2>
+            <p class="subheading_title">Common Attributes</p>
+            <div class="features top_attributes">
+                {% if not bottom_attributes.empty %}
+                {% if bottom_attributes is mapping %}
+                <ul class="business_attributes">
+                    {% for key, value in bottom_attributes.items() %}
+
+                    <li>{{key}} : {{value}}</li>
+
+                    {% endfor %}
+                </ul>
+                {% endif %}
+                {% endif %}
+            </div>
+
+            <p class="subheading_title">Prominent Keywords from Reviews</p>
+            <div id="bottom-word-cloud"></div>
+
+            <p class="subheading_title">Negatives from the Reviews</p>
+
+            <div class="features top_attributes">
+                {% if not bottom_reviews.empty %}
+                <table>
+                    <tr>
+                        <th>Keyword</th>
+                        <th>Occurrences</th>
+                        <th>Sample Review</th>
+                    </tr>
+                    {% for index, row in bottom_reviews.iterrows() %}
+                    <tr>
+                        <td>{{row['feature']}}</td>
+                        <td>{{row['occurrences']}}</td>
+                        <td>{{row['sentence']}}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+                {% endif %}
+            </div>
+
+            <p class="subheading_title">List of bottom businesses based on ratings and popularity.</p>
+            <div class="features">
+                {% if not bottom_businesses.empty %}
+                {% for index, row in bottom_businesses.iterrows() %}
+
+                <div class="accordion" id="accordion-bottom-businesses">
+                    <div class="accordion-item">
+                        <h4 class="accordion-header" id="headingTwo">
+                            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#{{ row['business_id'] }}" aria-expanded="true" aria-controls="{{ row['business_id'] }}">
+                                {{ row['name'] }}
+                            </button>
+                        </h4>
+                        <div id="{{ row['business_id'] }}" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#accordion-bottom-businesses">
+                            <div class="accordion-body">
+                                <div><b>Address:</b> {{ row['address'] }}</div>
+                                <div><b>City:</b> {{ row['city'] }}</div>
+                                <div><b>Ratings:</b> {{row['ratings'] }}</div>
+                                <div><b>Stars:</b> {{ row['stars'] }}</div>
+                                <div><b>Review Count:</b> {{ row['review_count'] }}</div>
+                                <div><b>Status:</b> {% if row['is_open'] == 1 %}
+                                    Open
+                                    {% else %}
+                                    Permanently Closed
+                                    {% endif %}
+                                </div>
+                                <div><b>Attributes:</b>
+                                    {% set cell_dict = row['attributes'] %}
+                                    {% if cell_dict is mapping %}
+                                    <ul class="business_attributes">
+                                    {% for key, value in cell_dict.items() %}
+                                        <li>{{key}} : {{value}}</li>
+                                    {% endfor %}
+                                    </ul>
+                                    {% endif %}
+                                </div>
+                                <div><b>Tags:</b> {{ row['categories'] }}</div>
+                                <div><b>Distance:</b> {{ row['distance'] }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {% endfor %}
+                {% endif %}
+            </div>
+            <!-- END: bottom businesses-->
+        </div>
+            <!-- START: other businesses-->
+        <span class="button scrolly" id="toggle_button">Show Other Businesses</span>
+        <div class="inner hide" id="two-c">
+
+            <h2>Other businesses in the area</h2>
+            <p class="subheading_title">List of other businesses based on ratings and popularity.</p>
+                <div class="features">
+                {% if not filtered_businesses.empty %}
+
+                {% for index, row in filtered_businesses.iterrows() %}
+
+                <div class="accordion" id="accordion-businesses">
+                    <div class="accordion-item">
+                        <h4 class="accordion-header" id="headingThree">
+                            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#{{ row['business_id'] }}" aria-expanded="true" aria-controls="{{ row['business_id'] }}">
+                                {{ row['name'] }}
+                            </button>
+                        </h4>
+                        <div id="{{ row['business_id'] }}" class="accordion-collapse collapse" aria-labelledby="headingThree" data-bs-parent="#accordion-businesses">
+                            <div class="accordion-body">
+                                <div><b>Address:</b> {{ row['address'] }}</div>
+                                <div><b>City:</b> {{ row['city'] }}</div>
+                                <div><b>Ratings:</b> {{row['ratings'] }}</div>
+                                <div><b>Stars:</b> {{ row['stars'] }}</div>
+                                <div><b>Review Count:</b> {{ row['review_count'] }}</div>
+                                <div><b>Status:</b> {% if row['is_open'] == 1 %}
+                                    Open
+                                    {% else %}
+                                    Permanently Closed
+                                    {% endif %}
+                                </div>
+                                    {% set cell_dict = row['attributes'] %}
+                                    {% if cell_dict is mapping %}
+                                <div><b>Attributes:</b>
+                                    <ul class="business_attributes">
+                                    {% for key, value in cell_dict.items() %}
+                                        <li>{{key}} : {{value}}</li>
+                                    {% endfor %}
+                                    </ul>
+                                </div>
+                                {% endif %}
+                                <div><b>Tags:</b> {{ row['categories'] }}</div>
+                                <div><b>Distance:</b> {{ row['distance'] }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {% endfor %}
+                {% endif %}
+            </div>
+            <!-- END: other businesses-->
+
+        </div>
+    </section>
+
+</div>
+    <!--scroll js scripts-->
+    <script src="{{ url_for('static',filename='js/jquery.min.js') }}"></script>
+    <script src="{{ url_for('static',filename='js/jquery.scrollex.min.js') }}"></script>
+    <script src="{{ url_for('static',filename='js/jquery.scrolly.min.js') }}"></script>
+    <script src="{{ url_for('static',filename='js/browser.min.js') }}"></script>
+    <script src="{{ url_for('static',filename='js/breakpoints.min.js') }}"></script>
+    <script src="{{ url_for('static',filename='js/util.js') }}"></script>
+    <script src="{{ url_for('static',filename='js/filtered.js') }}"></script>
+
+    <!--success score color change -->
+<script>
+     var div = document.getElementById('success_score_number');
+    if ({{success_score}} >= 80) {
+        div.classList.add("text_color_green");
+    }
+    else if ({{success_score}} > 50 && {{success_score}} < 80) {
+        div.classList.add("text_color_yellow");
+    }
+    else {
+        div.classList.add("text_color_red");
+    }
+</script>
+<script>
+    var flag = 0;
+    var changeText = document.getElementById("toggle_button");
+    $("#toggle_button").on("click",function(){
+    $("#two-c").toggleClass("hide");
+
+     if(flag == 0){
+        window.scrollTo(0, document.body.scrollHeight);
+        changeText.textContent = "Hide Other Businesses";
+        flag = 1;
+     } else {
+        changeText.textContent = "Show Other Businesses";
+        flag = 0;
+     }
+    });
+</script>
+    <!--bar plot-->
+    <script>
+       var x = [];
+    {% for star in all_businesses.stars %}
+        x.push({{star}})
+    {% endfor %}
+
+    var trace = {
+        x: x,
+        type: 'histogram',
+      };
+    var layout = {
+      bargap: 0.05,
+      bargroupgap: 0.2,
+      barmode: "overlay",
+      title: "Distribution of Rating",
+      xaxis: {title: "Rating"},
+      yaxis: {title: "Business Count"}
+    };
+    var data = [trace];
+    Plotly.newPlot('ratings_graph', data, layout);
+    </script>
+
+    <!--pie plot-->
+    <script>
+    var open = 0;
+    var total = 0;
+    {% for status in all_businesses.is_open %}
+        open += {{status}}
+        total += 1
+    {% endfor %}
+        var data = [{
+      values: [open, total-open],
+      labels: ['Open', 'Closed'],
+      type: 'pie',
+      name: 'Business Status'
+    }];
+
+    var layout = {
+      title: 'Open/Closed Businesses',
+      font:{
+        family: 'Raleway, sans-serif'
+      },
+      height: 400,
+      width: 500
+    };
+
+    Plotly.newPlot('status_graph', data, layout);
+    </script>
+
+    <!--timing bar-->
+    <script>
+    var trace1 = {
+      x: ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'],
+      y: {{avg_start}},
+      name: 'Opening Time',
+      type: 'bar',
+      text: {{avg_start}}.map(String),
+      textposition: 'auto'
+    };
+
+    var trace2 = {
+      x: ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'],
+      y: {{avg_end}},
+      name: 'Closing Time',
+      type: 'bar',
+      text: {{avg_end}}.map(String),
+      textposition: 'auto'
+    };
+    var layout = {
+      title: 'Opening & Closing Timings of Top Businesses (Avg)',
+      font:{
+        family: 'Raleway, sans-serif'
+      },
+      showlegend: true,
+      xaxis: {
+        title: 'Days',
+      },
+      yaxis: {
+        title: 'Hours',
+      },
+      bargap :0.05,
+      barmode: 'group'
+    };
+
+    var data = [trace1, trace2];
+
+    Plotly.newPlot('timing', data, layout);
+    </script>
+
+<!--top-word-cloud-->
+<script>
+    var margin = { top: 10, right: 10, bottom: 10, left: 10 },
+        width = 600 - margin.left - margin.right,
+        height = 550 - margin.top - margin.bottom;
+
+        var myWords = []
+        {% for index, row in top_reviews.iterrows(): %}
+            myWords.push({"word":"{{row['feature']}}", "size":"{{row['occurrences']}}", "sentence":"{{row['sentence']}}"})
+        {% endfor %}
+
+
+
+    var svg = d3.select("#top-word-cloud").append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+        .attr("class", "word-cloud-svg")
+        .append("g")
+        .attr("transform",
+            "translate(" + margin.left + "," + margin.top + ")");
+
+    var word_list = myWords
+
+    word_list = word_list.sort(function(a, b) { return a.size - b.size; });
+
+    // For color gradient: computing max and min values for mapping color
+    var maxValue = d3.max(word_list, function(d) { return d.size });
+    var minValue = d3.min(word_list, function(d) { return d.size });
+
+    // Color gradient scale for highest to lowest shade
+    var color = d3.scaleSequential()
+        .interpolator(d3.interpolatePurples) // built in purple color scheme
+        .domain([minValue, maxValue - 3]);
+
+    // create function for the range of colors
+    function get_rgb(from_percentage, to_percentage, value) {
+        return (maxValue * from_percentage / 100 + value * (to_percentage - from_percentage) / 100)
+    }
+
+    var prev_frequency = 0
+    var rank = 0
+
+    word_list.forEach(function(d) {
+        var frequency = d.size
+
+        if (frequency != prev_frequency) {
+            rank += 1
+        }
+
+        d.rank = rank
+
+        prev_frequency = frequency
+
+
+        d.color = color(get_rgb(50, 100, frequency)); // enter the range: "from" and "to" value of the color scale here
+    });
+
+    // Constructs a new cloud layout instance. It runs an algorithm to find the position of words that suits your requirements
+    // Wordcloud features that are different from one word to the other must be here
+    var layout = d3.layout.cloud()
+        .size([width, height])
+        .words(word_list)
+        .padding(2) //space between words
+        .rotate(0)
+        .font('Helvetica')
+        .fontWeight("bold")
+        .fontSize(function(d) { return 20 + d.rank * 8 / 3; })
+        .text(function(d) { return d.word; })
+        .on("end", draw);
+    layout.start();
+
+    // This function takes the output of 'layout' above and draw the words
+    // Wordcloud features that are THE SAME from one word to the other can be here
+    function draw(words) {
+
+        d3.select('#top-word-cloud')
+                    .append('div')
+                    .attr('id', 'tooltip-top')
+
+        svg
+            .append("g")
+            .attr("transform", "translate(" + layout.size()[0] / 2 + "," + layout.size()[1] / 2 + ")")
+            .selectAll("text")
+            .data(words)
+            .enter().append("text")
+            .attr("font-size", function(d) { return 20 + d.rank * 8 / 3 + "px"; })
+            // .style("fill", "#69b3a2")
+            .attr("text-anchor", "middle")
+            .style("font-family", "Helvetica")
+            // .attr('font-family', 'Impact')
+            .attr("fill", function(d) { return d.color; })
+            .attr("transform", function(d) {
+                return "translate(" + [d.x, d.y] + ")rotate(" + d.rotate + ")";
+            })
+            .text(function(d) { return d.word; })
+            .on('mouseover', function(event, d) {
+                d3.select('#tooltip-top')
+                    .style('opacity', 1)
+                    .text(`Review: ${d.sentence}`)
+                    .style('left', (event.pageX) + 'px')
+                    .style('top', (event.pageY) + 'px')
+            })
+            .on('mouseout', function(event, d) {
+                d3.select('#tooltip-top')
+                    .style('opacity', 0)
+            });
+    }
+</script>
+<!--bottom-word-cloud-->
+<script>
+    var margin = { top: 10, right: 10, bottom: 10, left: 10 },
+        width = 600 - margin.left - margin.right,
+        height = 550 - margin.top - margin.bottom;
+
+        var myWords = []
+        {% for index, row in bottom_reviews.iterrows(): %}
+            myWords.push({"word":"{{row['feature']}}", "size":"{{row['occurrences']}}", "sentence":"{{row['sentence']}}"})
+        {% endfor %}
+
+
+
+    var svg = d3.select("#bottom-word-cloud").append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+        .attr("class", "word-cloud-svg")
+        .append("g")
+        .attr("transform",
+            "translate(" + margin.left + "," + margin.top + ")");
+
+    var word_list = myWords
+
+    word_list = word_list.sort(function(a, b) { return a.size - b.size; });
+
+    // For color gradient: computing max and min values for mapping color
+    var maxValue = d3.max(word_list, function(d) { return d.size });
+    var minValue = d3.min(word_list, function(d) { return d.size });
+
+    // Color gradient scale for highest to lowest shade
+    var color = d3.scaleSequential()
+        .interpolator(d3.interpolatePurples) // built in purple color scheme
+        .domain([minValue, maxValue - 3]);
+
+    // create function for the range of colors
+    function get_rgb(from_percentage, to_percentage, value) {
+        return (maxValue * from_percentage / 100 + value * (to_percentage - from_percentage) / 100)
+    }
+
+    var prev_frequency = 0
+    var rank = 0
+
+    word_list.forEach(function(d) {
+        var frequency = d.size
+
+        if (frequency != prev_frequency) {
+            rank += 1
+        }
+
+        d.rank = rank
+
+        prev_frequency = frequency
+
+
+        d.color = color(get_rgb(50, 100, frequency)); // enter the range: "from" and "to" value of the color scale here
+    });
+
+    // Constructs a new cloud layout instance. It runs an algorithm to find the position of words that suits your requirements
+    // Wordcloud features that are different from one word to the other must be here
+    var layout = d3.layout.cloud()
+        .size([width, height])
+        .words(word_list)
+        .padding(2) //space between words
+        .rotate(0)
+        .font('Helvetica')
+        .fontWeight("bold")
+        .fontSize(function(d) { return 20 + d.rank * 8 / 3; })
+        .text(function(d) { return d.word; })
+        .on("end", draw);
+    layout.start();
+
+    // This function takes the output of 'layout' above and draw the words
+    // Wordcloud features that are THE SAME from one word to the other can be here
+    function draw(words) {
+
+        d3.select('#bottom-word-cloud')
+                    .append('div')
+                    .attr('id', 'tooltip-bottom')
+
+        svg
+            .append("g")
+            .attr("transform", "translate(" + layout.size()[0] / 2 + "," + layout.size()[1] / 2 + ")")
+            .selectAll("text")
+            .data(words)
+            .enter().append("text")
+            .attr("font-size", function(d) { return 20 + d.rank * 8 / 3 + "px"; })
+            // .style("fill", "#69b3a2")
+            .attr("text-anchor", "middle")
+            .style("font-family", "Helvetica")
+            // .attr('font-family', 'Impact')
+            .attr("fill", function(d) { return d.color; })
+            .attr("transform", function(d) {
+                return "translate(" + [d.x, d.y] + ")rotate(" + d.rotate + ")";
+            })
+            .text(function(d) { return d.word; })
+            .on('mouseover', function(event, d) {
+                d3.select('#tooltip-bottom')
+                    .style('opacity', 1)
+                    .text(`Review: ${d.sentence}`)
+                    .style('left', (event.pageX) + 'px')
+                    .style('top', (event.pageY) + 'px')
+            })
+            .on('mouseout', function(event, d) {
+                d3.select('#tooltip-bottom')
+                    .style('opacity', 0)
+            });
+    }
+</script>
+</body>
+</html>

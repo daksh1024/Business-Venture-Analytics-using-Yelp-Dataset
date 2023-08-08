@@ -1,0 +1,100 @@
+<!doctype html>
+<html>
+<head>
+    <title>
+        608
+    </title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+    <link rel="stylesheet" href="{{ url_for('static',filename='css/main.css') }}" />
+
+    <link rel="stylesheet" href="{{ url_for('static',filename='css/jquery-ui.css') }}" />
+
+    <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+</head>
+
+<body class="is-preload">
+
+<!-- Header -->
+<header id="header">
+    <h1>Business Analyzer</h1>
+    <p>Explore what you need for the success of your new business.</p>
+</header>
+
+
+<!-- Scripts -->
+<script src="{{ url_for('static',filename='js/main.js') }}"></script>
+
+
+<form method="post" id="signup-form">
+    <label for="category">Category:</label>
+    <input type="text" id="category" name="category" value="{{ request.form['category'] }}"><br><br>
+    {% if error|length %}
+        <p>{{error}}</p>
+    {% endif %}
+    <label for="address">Address:</label>
+    <input type="text" id="address" name="address" value="{{ request.form['address'] }}"><br><br>
+    <label for="distance">Distance:</label>
+    <input type="number" step="any" id="distance" name="distance" value="{{ request.form['distance'] }}"><br><br>
+    <!--<input type="range" min="0" max="100" step="2" id="distance" name="distance" value="{{ request.form['distance'] }}"><br><br>-->
+    <input type="submit" value="Submit">
+</form>
+{% if error_flag == 1 %}
+    <div style="color:red;">Error: {{ error_message }}</div>
+{% endif %}
+<!--<p name="printcategory">{{ request.form['category'] }}</p>-->
+
+<!-- Footer -->
+<footer id="footer">
+    <ul class="icons">
+        <li><a href="#" class="icon brands fa-github"><span class="label">GitHub</span></a></li>
+        <li><a href="#" class="icon fa-envelope"><span class="label">Email</span></a></li>
+    </ul>
+    <ul class="copyright">
+        <li>&copy; Untitled.</li><li>Credits: <a href="https://www.yelp.com/dataset">Yelp</a></li>
+    </ul>
+</footer>
+
+<script>
+    $(function() {
+        $.ajax({
+            url: '{{ url_for("autocomplete") }}'
+            }).done(function (data){
+                $('#address').autocomplete({
+                    source: data,
+                    minLength: 1
+                });
+            });
+        });
+</script>
+<script>
+    $(function() {
+        $.ajax({
+            url: '{{ url_for("autocompletecategory") }}'
+            }).done(function (data){
+                $('#category').autocomplete({
+                    source: data,
+                    minLength: 1
+                });
+                $('#category').on('change', function() {
+            var inputVal = $(this).val().toLowerCase();
+            var autocompleteOptions = data.map(function(item) {
+                return item.toLowerCase();
+            });
+
+            if (autocompleteOptions.indexOf(inputVal) === -1) {
+                alert('Category not found. Please insert from the autocomplete list.');
+                $(this).val('');
+            }
+        });
+            });
+        });
+</script>
+<script>
+    if ( window.history.replaceState ) {
+        window.history.replaceState( null, null, window.location.href );
+    }
+</script>
+</body>
+</html>
