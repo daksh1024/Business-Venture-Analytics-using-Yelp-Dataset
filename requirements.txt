@@ -1,0 +1,9 @@
+flask
+pandas
+numpy wtforms
+dask
+google-cloud-bigquery
+scipy
+nltk
+ast
+requests
